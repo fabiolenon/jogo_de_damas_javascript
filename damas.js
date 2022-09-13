@@ -19,7 +19,7 @@ function imprimirTabuleiro(tabuleiro) {
     console.table(tabela);
 }
 
-lxcParaIndex(lxc) {
+function lxcParaIndex(lxc) {
     if (lxc !== null) {
         let lc = lxc.split('x').map(Number);
         let l = lc[o];
@@ -74,11 +74,93 @@ function mover(tabuleiro, indexOrigem, indexDestino) {
     }
 
     if (['p', 'b'].includes(peca)) {
-
+        return moverComum(tabuleiro, indexOrigem, indexDestino, peca, diferenca);
     }
     else {
-
+        return moverDama(tabuleiro, indexOrigem, indexDestino, peca, diferenca);
     }
+}
+
+function moverComum(tabuleiro, indexOrigem, indexDestino, peca, diferenca) {
+    let direcao = diferenca % 7 === 0 ? 7 : 9;
+    let numCasas = diferenca / direcao;
+
+    if (numCasas < 0) {
+        numCasas = -numCasas;
+        direcao = -direcao;
+    }
+
+    if (numCasas === 1) {
+        if (peca === 'p' && indexDestino > indexOrigem
+            || peca === 'b' && indexDestino < indexOrigem)
+        {
+            tabuleiro[indexOrigem] = ' ';
+            tabuleiro[indexDestino] = peca;
+            return {ok: true, capturas: 0}
+        }
+        else {
+            return {ok: false, msg: "Movimento para trás inválido"};
+        }
+    }
+    else if (numCasas === 2) {
+        let indexCaptura = indexOrigem + direcao;
+        let pecaCapturada = tabuleiro[indexCaptura].toLowerCase();
+
+        if (peca === 'b' && pecaCapturada === 'p' ||
+            peca === 'p' && pecaCapturada === 'b')
+        {
+            tabuleiro[indexOrigem] = ' ';
+            tabuleiro[indexCaptura] = ' ';
+            tabuleiro[indexDestino] = peca;
+            return {ok: true, capturas: 1};
+        }
+        else {
+            return {ok: false, msg: "Nenhuma peça para capturar"};
+        }
+    }
+    else {
+        return {ok: false, msg: "Movimento longo inválido"};
+    }
+}
+
+function moverDama(tabuleiro, indexOrigem, indexDestino, peca, diferenca) {
+    let direcao = diferenca % 7 === 0 ? 7 : 9;
+    let numCasas = diferenca / direcao;
+
+    if (numCasas < 0) {
+        numCasas = -numCasas;
+        direcao = -direcao;
+    }
+
+    let adversario = peca === 'B' ? 'P' : 'B';
+
+    let seguidas = 0;
+    let capturas = [];
+
+    for (let i = indexOrigem + direcao; i !== indexDestino; i += direcao) {
+        if (tabuleiro[i].toUpperCase() === peca) {
+            return{ok: false, msg: "Peças da mesma cor no caminho"};
+        }
+        else if (tabuleiro[i].toUpperCase() === adversario) {
+            capturas.push(i);
+            seguidas += 1;
+        }
+        else {
+            seguidas = 0;
+        }
+
+        if (seguidas > 1) {
+            return {ok: false, msg: "Duas ou mais peças seguidas no caminho"};
+        }
+    }
+
+    for (let i of capturas) {
+        tabuleiro[i] = ' ';
+    }
+    tabuleiro[indexOrigem] = ' ';
+    tabuleiro[indexDestino] = peca;
+
+    return {ok: true, capturas: capturas.length};
 }
 
 function promoverPecas(tabuleiro) {
@@ -101,4 +183,28 @@ function promoverPecas(tabuleiro) {
     }
 }
 
-// PAREI NO TEMPO 46 MINUTOS DO VIDEO
+function jogar() {
+    let tabuleiro = criarTabuleiro();
+    let turno = ['branca', 'preta'];
+    let pecas = {brancas: 4 * 3, pretas: 4 * 3}
+
+    while (pecas.brancas > 0 && pecas.pretas > 0) {
+        imprimirTabuleiro(tabuleiro);
+
+        let indexOrigem = escolherPeca(tabuleiro, turno[0]);
+        let indexDestino = escolherLxCDestino(tabuleiro);
+
+        let r = mover(tabuleiro, indexOrigem, indexDestino);
+        if(r.ok) {
+            pecas[turno[1] + 's'] -= r.capturas;
+            turno.push(turno.shift());
+            promoverPecas(tabuleiro);
+        }
+        else {
+            alert(r.msg)
+        }
+    }
+
+    imprimirTabuleiro(tabuleiro);
+    console.table(pecas);
+}
